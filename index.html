@@ -7,32 +7,50 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  // Apply the saved theme before the page draws, so it never flashes the wrong colors.
+  (function(){ var p="auto"; try{ p=JSON.parse(localStorage.getItem("ussmoke.theme"))||"auto"; }catch(e){}
+    var dark=p==="dark"||(p==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.setAttribute("data-theme",dark?"dark":"light"); })();
+</script>
 <style>
   :root{
     --ink:#1d2327; --muted:#5d6970; --line:#d9dee2; --bg:#f4f5f2; --panel:#ffffff;
     --head:#23292f; --head-ink:#f1eee6; --accent:#c4561b; --ok:#2e9e44; --warn:#b54708;
+    --input:#ffffff; --win:#eef7ef; --note:#fff4e5; --hoverbg:rgba(255,255,255,.96); --mapbg:#dfe3e0; --link:#0b5cad;
+    color-scheme:light;
+  }
+  :root[data-theme="dark"]{
+    --ink:#e6e8ea; --muted:#9aa6ad; --line:#3a4248; --bg:#15191c; --panel:#1d2226;
+    --head:#0f1215; --head-ink:#eceae4; --accent:#e0702f; --ok:#4cbf62; --warn:#f0a35c;
+    --input:#262c31; --win:#1e3324; --note:#3a2a17; --hoverbg:rgba(29,34,38,.97); --mapbg:#2a3034; --link:#7db4ff;
+    color-scheme:dark;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-  header{background:var(--head);color:var(--head-ink);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+  header{position:relative;background:var(--head);color:var(--head-ink);padding:10px 64px 10px 16px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+  #hdrTitle{flex:1 1 360px;min-width:0}
   header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
   header .sub{font-size:12px;opacity:.78}
   #drawerBtn{display:none;background:transparent;color:var(--head-ink);border-color:rgba(255,255,255,.35)}
   .clocks{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
-  .clock{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:5px 11px;min-width:190px}
-  .clock .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;opacity:.75}
-  .clock .val{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}
-  .clock.primary{border-color:var(--accent);background:rgba(196,86,27,.22)}
-  .clock.utc{min-width:150px}
+  .clock{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:5px 11px;min-width:150px}
+  .clock .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;opacity:.75;white-space:nowrap}
+  .clock .val{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .clock.primary{border-color:var(--accent);background:rgba(196,86,27,.22);min-width:230px}
+  .exp-badge{display:inline-block;vertical-align:3px;margin-left:8px;padding:1px 7px;border-radius:4px;background:#f5b400;color:#1d2327;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+  #expBar{flex:0 0 calc(100% + 80px);order:10;margin:2px -64px -10px -16px;padding:6px 16px;background:#f5b400;color:#1d2327;font-size:13px;line-height:1.35}
+  #expBar b{letter-spacing:.4px}
   main{display:grid;grid-template-columns:350px 1fr;height:calc(100% - var(--hh,80px))}
   aside{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:12px 14px 28px}
   aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:18px 0 6px}
   aside h2:first-of-type{margin-top:4px}
-  select,input[type=number],input[type=text]{font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  select,input[type=number],input[type=text]{font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--ink)}
+  a{color:var(--link)}
   select{width:100%}
   input[type=number]{width:72px}
   input[type=range]{width:100%}
-  button{font:inherit;padding:5px 9px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;color:var(--ink)}
+  button{font:inherit;padding:5px 9px;border:1px solid var(--line);background:var(--input);border-radius:6px;cursor:pointer;color:var(--ink)}
   button:hover{border-color:#9aa5ab}
   button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   button.small{padding:2px 7px;font-size:12px}
@@ -55,7 +73,7 @@
   .unit input[type=text]{width:100%;font-weight:600;padding:3px 5px}
   .unit .next{margin:4px 0}
   .right{display:flex;flex-direction:column;min-height:0;position:relative}
-  #map{flex:1;min-height:300px;background:#dfe3e0}
+  #map{flex:1;min-height:300px;background:var(--mapbg)}
   #map.adding{cursor:crosshair}
   #detail{background:var(--panel);border-top:1px solid var(--line);max-height:55%;overflow:auto;padding:10px 16px;display:none}
   #detail.open{display:block}
@@ -67,30 +85,49 @@
   th,td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
   th{color:var(--muted);font-weight:600}
   .pill{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11.5px;font-weight:600;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.5)}
-  .win{padding:5px 8px;border-left:4px solid var(--ok);background:#eef7ef;margin:4px 0;border-radius:3px}
+  .win{padding:5px 8px;border-left:4px solid var(--ok);background:var(--win);margin:4px 0;border-radius:3px}
   .flag{color:var(--warn);font-weight:600}
-  .note{padding:5px 8px;border-left:4px solid var(--warn);background:#fff4e5;margin:4px 0;border-radius:3px;font-size:12.5px}
-  .banner{position:absolute;z-index:1000;top:10px;left:50%;transform:translateX(-50%);background:#fff4e5;border:1px solid #f0c27a;padding:8px 14px;border-radius:8px;max-width:90%;box-shadow:0 2px 8px rgba(0,0,0,.15);display:none}
-  #hover{position:absolute;z-index:900;pointer-events:none;background:rgba(255,255,255,.96);border:1px solid #bbb;border-radius:6px;padding:5px 8px;font-size:12px;line-height:1.35;box-shadow:0 1px 6px rgba(0,0,0,.2);display:none;max-width:320px}
+  .note{padding:5px 8px;border-left:4px solid var(--warn);background:var(--note);margin:4px 0;border-radius:3px;font-size:12.5px}
+  .banner{position:absolute;z-index:1000;top:10px;left:50%;transform:translateX(-50%);background:var(--note);color:var(--ink);border:1px solid #f0c27a;padding:8px 14px;border-radius:8px;max-width:90%;box-shadow:0 2px 8px rgba(0,0,0,.15);display:none}
+  #hover{position:absolute;z-index:900;pointer-events:none;background:var(--hoverbg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;line-height:1.35;box-shadow:0 1px 6px rgba(0,0,0,.2);display:none;max-width:320px}
   #loading{position:absolute;z-index:950;right:12px;bottom:28px;background:rgba(35,41,47,.88);color:#fff;font-size:12px;padding:4px 10px;border-radius:12px;display:none}
   .smooth-layer{position:absolute;left:0;top:0;pointer-events:none}
   .closebtn{float:right}
   .stale{color:#ffd7a8}
   #printHead{display:none}
+  #themeBtn{position:absolute;top:10px;right:12px;background:transparent;color:var(--head-ink);border-color:rgba(255,255,255,.35);font-size:18px;line-height:1;padding:6px 9px}
+  #themeBtn:hover{border-color:rgba(255,255,255,.7)}
+  /* Leaflet controls, popups and tooltips in dark mode */
+  :root[data-theme="dark"] .leaflet-bar a,:root[data-theme="dark"] .leaflet-control-layers,:root[data-theme="dark"] .leaflet-popup-content-wrapper,
+  :root[data-theme="dark"] .leaflet-popup-tip,:root[data-theme="dark"] .leaflet-tooltip{background:#262c31;color:var(--ink);border-color:#3a4248}
+  :root[data-theme="dark"] .leaflet-tooltip-top:before{border-top-color:#262c31}
+  :root[data-theme="dark"] .leaflet-control-attribution{background:rgba(29,34,38,.8);color:#9aa6ad}
+  :root[data-theme="dark"] .leaflet-control-attribution a{color:#7db4ff}
+  :root[data-theme="dark"] .leaflet-control-scale-line{background:rgba(29,34,38,.8);color:var(--ink);border-color:#9aa6ad}
   @media (max-width:900px){
     #drawerBtn{display:inline-block}
     main{grid-template-columns:1fr;height:calc(100% - var(--hh,80px))}
     aside{position:fixed;z-index:2000;left:0;top:var(--hh,80px);bottom:0;width:min(92vw,360px);transform:translateX(-105%);transition:transform .2s;box-shadow:2px 0 12px rgba(0,0,0,.25)}
     body.drawer aside{transform:none}
     .charts,.charts.three{grid-template-columns:1fr}
-    .clocks{margin-left:0}
-    .clock{min-width:0;flex:1;padding:4px 8px}
-    .clock .val{font-size:14px}
+    .clocks{margin-left:0;width:100%;flex-wrap:nowrap}
+    .clock,.clock.primary{min-width:0;flex:1 1 0;padding:4px 8px;overflow:hidden}
+    .clock.primary{flex:1.5 1 0}
+    .clock .lbl{white-space:normal;line-height:1.25;font-size:9.5px;letter-spacing:.3px}
+    .clock .val{font-size:12px}
+    .cdate{display:none}
+    .clocks{gap:5px}
+    .clock .val{font-size:13px}
+    #expBar{font-size:12px;padding:5px 12px}
+    header .sub-static,.exp-badge{display:none}
+    header{padding:8px 60px 8px 12px;gap:6px 10px}
+    header h1{font-size:15px}
   }
   @media print{
     @page{size:landscape;margin:10mm}
+    :root,:root[data-theme="dark"]{--ink:#1d2327;--muted:#5d6970;--line:#d9dee2;--bg:#fff;--panel:#fff;--input:#fff;--win:#eef7ef;--note:#fff4e5;--link:#0b5cad;color-scheme:light}
     body{background:#fff}
-    header .clocks,#drawerBtn,aside,#hover,#loading,.leaflet-control-container,#detail .closebtn,#detail button{display:none!important}
+    header .clocks,#drawerBtn,#themeBtn,aside,#hover,#loading,.leaflet-control-container,#detail .closebtn,#detail button{display:none!important}
     main{display:block;height:auto}
     .right{height:auto}
     #map{height:150mm!important;flex:none}
@@ -103,15 +140,14 @@
 <body>
 <header id="hdr">
   <button id="drawerBtn" aria-label="Show controls">☰ Controls</button>
-  <div>
-    <h1>National Smoke Dispersion &amp; Burn-Window Planner</h1>
-    <div class="sub">National Blend of Models + HRRR smoke · CONUS, Alaska, Hawaii, Puerto Rico · <span id="updated">loading…</span></div>
+  <div id="hdrTitle">
+    <h1>National Smoke Dispersion &amp; Burn-Window Planner<span class="exp-badge">Experimental</span></h1>
+    <div class="sub"><span class="sub-static">National Blend of Models + HRRR smoke · CONUS, Alaska, Hawaii, Puerto Rico · </span><span id="updated">loading…</span></div>
   </div>
-  <div class="clocks">
-    <div class="clock primary" id="clock1"><div class="lbl" id="lbl1">—</div><div class="val" id="val1">—</div></div>
-    <div class="clock" id="clock2"><div class="lbl" id="lbl2">—</div><div class="val" id="val2">—</div></div>
-    <div class="clock utc"><div class="lbl">UTC</div><div class="val" id="valZ">—</div></div>
-  </div>
+  <div class="clocks" id="clocks" aria-label="Selected forecast time in every US time zone"></div>
+  <div id="expBar" role="note"><b>⚠ EXPERIMENTAL:</b> This page is under development. Do not use this page to make operational decisions.
+    If you need assistance with tactical planning, please reach out to your local Predictive Services forecaster.</div>
+  <button id="themeBtn" aria-label="Switch to dark mode" title="Switch to dark mode">🌙</button>
 </header>
 
 <main>
@@ -125,10 +161,9 @@
     <h2>Area</h2>
     <select id="regionSel" aria-label="Zoom to area"></select>
     <div class="grid2" style="margin-top:8px">
-      <label for="tz1" class="small">Main time</label><select id="tz1"></select>
-      <label for="tz2" class="small">Second time</label><select id="tz2"></select>
+      <label for="tz1" class="small">Area time zone</label><select id="tz1"></select>
     </div>
-    <div class="small" style="margin-top:4px">Picking an area sets its usual time zones. Burn hours and point forecasts always use each location's own local time.</div>
+    <div class="small" style="margin-top:4px">Picking an area sets its time zone; the top-right clock switches to a clicked point's own time zone. Burn hours and point forecasts always use each location's own local time.</div>
 
     <h2>Map layer</h2>
     <select id="layerSel" aria-label="Map layer"></select>
@@ -201,6 +236,8 @@
 
     <h2>Display</h2>
     <div class="grid2">
+      <label for="themeSel" class="small">Theme</label>
+      <select id="themeSel"><option value="auto">Match my device</option><option value="light">Light</option><option value="dark">Dark</option></select>
       <label for="uVent" class="small">Ventilation</label><select id="uVent"></select>
       <label for="uWind" class="small">Wind</label><select id="uWind"></select>
       <label for="uTemp" class="small">Temperature</label><select id="uTemp"></select>
@@ -309,7 +346,7 @@ const UNIT_OPTS = {
 // ================================================================= state
 const S = {
   M: null, times: [], dur: [], N: 0, D: {}, zones: [], t: 0, layer: "vent",
-  tz1: "America/Denver", tz2: "America/Phoenix", region: "conus",
+  tz1: "America/Denver", tz2: "", region: "conus",
   crit: null, critVer: 0, ventTh: VENT_DEFAULT.slice(), VENT: [], opacity: 0.65,
   units: { vent: "kt-ft", wind: "mph", temp: "F", hgt: "ft", precip: "in" }, cb: false, lite: false,
   LH: [], DK: [], NK: [], dayKeys1: [], frames: new Map(), derived: new Map(), blocks: new Map(),
@@ -732,10 +769,13 @@ const base = {
   "Topographic": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { maxZoom: 16, attribution: "Tiles © Esri" }),
   "Imagery": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 17, attribution: "Tiles © Esri" }),
   "Light gray": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { maxZoom: 16, attribution: "Tiles © Esri" }),
+  "Dark gray": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", { maxZoom: 16, attribution: "Tiles © Esri" }),
   "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 17, attribution: "© OpenStreetMap contributors" }),
 };
-base["Topographic"].addTo(map);
+let baseName = document.documentElement.getAttribute("data-theme") === "dark" ? "Dark gray" : "Topographic";
+base[baseName].addTo(map);
 L.control.layers(base, null, { position: "topright" }).addTo(map);
+map.on("baselayerchange", e => { baseName = e.name; });
 L.control.scale({ imperial: true, metric: false }).addTo(map);
 map.attributionControl.addAttribution("Forecast: NOAA NBM, HRRR · Alerts: NWS · Air: AirNow, EPA · Fire: NIFC");
 map.createPane("grid");   map.getPane("grid").style.zIndex = 380;
@@ -940,20 +980,52 @@ function legendHtml() {
 function renderLegend() { $("legend").innerHTML = legendHtml(); }
 
 // ================================================================= time
-function setClock(i, tz, e) {
-  const box = $("clock" + i);
-  if (!tz) { box.style.display = "none"; return; }
-  box.style.display = "";
-  $("lbl" + i).textContent = zoneLabel(tz, e);
-  $("val" + i).textContent = fmt(e, tz, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+// Every US time zone, east to west. [IANA zone, name, standard abbreviation, daylight abbreviation or null]
+const US_ZONES = [
+  ["America/Puerto_Rico", "Atlantic", "AST", null], ["America/New_York", "Eastern", "EST", "EDT"], ["America/Chicago", "Central", "CST", "CDT"],
+  ["America/Denver", "Mountain", "MST", "MDT"], ["America/Phoenix", "Arizona", "MST", null], ["America/Los_Angeles", "Pacific", "PST", "PDT"],
+  ["America/Anchorage", "Alaska", "AKST", "AKDT"], ["America/Adak", "Aleutian", "HST", "HDT"], ["Pacific/Honolulu", "Hawaii", "HST", null],
+  ["Pacific/Pago_Pago", "Samoa", "SST", null], ["Pacific/Guam", "Chamorro", "ChST", null], ["UTC", "UTC", "UTC", null],
+];
+function utcOffsetMin(e, tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    .formatToParts(new Date(e * 1000)).map(x => [x.type, x.value]));
+  return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute) - e * 1000) / 60000);
+}
+function zoneAbbr(z, e) {
+  if (!z[3]) return z[2];
+  const y = new Date(e * 1000).getUTCFullYear(), jan = Date.UTC(y, 0, 15) / 1000, jul = Date.UTC(y, 6, 15) / 1000;
+  const std = Math.min(utcOffsetMin(jan, z[0]), utcOffsetMin(jul, z[0]));
+  return utcOffsetMin(e, z[0]) > std ? z[3] : z[2];
+}
+// Friendly name for any zone: an exact US zone, or the US zone it keeps the same time as (e.g. America/Boise = Mountain)
+function friendlyZone(tz, e) {
+  const exact = US_ZONES.find(z => z[0] === tz);
+  if (exact) return { name: exact[1], abbr: zoneAbbr(exact, e) };
+  const y = new Date(e * 1000).getUTCFullYear(), jan = Date.UTC(y, 0, 15) / 1000, jul = Date.UTC(y, 6, 15) / 1000;
+  const same = US_ZONES.find(z => z[0] !== "UTC" && utcOffsetMin(jan, z[0]) === utcOffsetMin(jan, tz) && utcOffsetMin(jul, z[0]) === utcOffsetMin(jul, tz));
+  return same ? { name: same[1], abbr: zoneAbbr(same, e) } : { name: tz.split("/").pop().replace(/_/g, " "), abbr: tzAbbr(e, tz) };
+}
+function renderClocks(e) {
+  const P = S.point, tz = P ? P.zone : S.tz1, fz = friendlyZone(tz, e);
+  const rs = $("regionSel"), area = rs.options[rs.selectedIndex] ? rs.options[rs.selectedIndex].text : "Area";
+  const src = P ? "Clicked point" : area;
+  const myTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", my = friendlyZone(myTz, e);
+  $("clocks").innerHTML = `
+    <div class="clock primary" title="${esc(P ? "Time zone of the point you clicked. Close the point forecast to go back to the area's time zone." : "Time zone of the selected area. Click a point on the map to use its own time zone.")}">
+      <div class="lbl">${esc(src)} · ${esc(fz.name)} ${esc(fz.abbr)}</div>
+      <div class="val">${esc(fmt(e, tz, { weekday: "short" }))}<span class="cdate"> ${esc(fmt(e, tz, { month: "short", day: "numeric" }))},</span> ${esc(fmt(e, tz, { hour: "numeric", minute: "2-digit" }))}</div></div>
+    <div class="clock" title="Your device's time zone">
+      <div class="lbl">Your time · ${esc(my.name)} ${esc(my.abbr)}</div>
+      <div class="val">${esc(fmt(e, myTz, { weekday: "short", hour: "numeric", minute: "2-digit" }))}</div></div>
+    <div class="clock"><div class="lbl">UTC</div><div class="val">${fmt(e, "UTC", { weekday: "short" })} ${zT(e).slice(3)}</div></div>`;
 }
 function setTime(t) {
   if (!S.N) return;
   S.t = Math.max(0, Math.min(S.N - 1, t));
   $("tSlider").value = S.t;
   const e = S.times[S.t];
-  setClock(1, S.tz1, e); setClock(2, S.tz2, e);
-  $("valZ").textContent = `${fmt(e, "UTC", { weekday: "short" })} ${zT(e).slice(3)}`;
+  renderClocks(e);
   render();
   if (S.point) S.charts.forEach(c => c.update("none"));
   document.querySelectorAll("#days button").forEach(b => b.classList.toggle("on", b.dataset.key === S.dayKeys1[S.t]));
@@ -1046,7 +1118,7 @@ async function selectPoint(ci) {
   $("detail").classList.add("open");
   $("detail").innerHTML = `<div class="small">Loading forecast for this point…</div>`;
   setTimeout(() => map.invalidateSize(), 50);
-  try { S.point = await pointSeries(ci); }
+  try { S.point = await pointSeries(ci); renderClocks(S.times[S.t]); }
   catch (e) { $("detail").innerHTML = `<button class="closebtn" id="closeDetail">Close ✕</button><div class="small">No forecast data at this location.</div>`; $("closeDetail").onclick = closeDetail; return; }
   buildDetail(); writeHash();
 }
@@ -1135,7 +1207,7 @@ function buildDetail() {
   buildCharts(P);
 }
 function closeDetail() {
-  $("detail").classList.remove("open"); S.point = null;
+  $("detail").classList.remove("open"); S.point = null; if (S.N) renderClocks(S.times[S.t]);
   if (selMarker) { map.removeLayer(selMarker); selMarker = null; }
   S.charts.forEach(ch => ch.destroy()); S.charts = [];
   setTimeout(() => map.invalidateSize(), 50); writeHash();
@@ -1151,7 +1223,7 @@ function pointCsv(P, C) {
       r1(cv("hgt", V.mh[t])), r1(cv("tw", V.tw[t])), r1(V.twd[t]), r1(cv("wind", V.ws[t])), r1(V.wd[t]), r1(cv("wind", V.wg[t])), r1(V.pop[t]), r1(cv("precip", V.qpf[t])),
       r1(V.rh[t]), r1(cv("temp", V.t[t])), r1(V.smk[t]), al === 1 ? "Red Flag Warning" : al === 2 ? "Fire Weather Watch" : "", r === null ? "yes" : "no", r || ""].join(","));
   }
-  return `# ${P.lat.toFixed(3)}, ${P.lon.toFixed(3)} · NBM run ${S.M.cycle} · criteria: ${critSummary(C)}\n` + lines.join("\n");
+  return `# EXPERIMENTAL - under development. Do not use to make operational decisions.\n# ${P.lat.toFixed(3)}, ${P.lon.toFixed(3)} · NBM run ${S.M.cycle} · criteria: ${critSummary(C)}\n` + lines.join("\n");
 }
 const shadePlugin = {
   id: "shade",
@@ -1287,7 +1359,7 @@ async function unitsCsv() {
       Math.round(cv("vent", w.peak)), ventCat(w.peak).name, w.conf == null ? "" : Math.round(w.conf), w.downwind == null ? "" : compass(w.downwind),
       `"${[...w.sens.map(s => s.name), ...w.alertsNear.map(a => a.properties.type)].join("; ")}"`].join(",")));
   }
-  download("burn_unit_windows.csv", lines.join("\n"), "text/csv");
+  download("burn_unit_windows.csv", "# EXPERIMENTAL - under development. Do not use to make operational decisions.\n" + lines.join("\n"), "text/csv");
 }
 
 // ================================================================= overlays
@@ -1312,7 +1384,7 @@ function addPerimeters(fc) {
 }
 function addGacc(fc) {
   S.gacc = fc;
-  OV.gacc = L.geoJSON(fc, { pane: "bounds", interactive: false, style: { color: "#222", weight: 2.2, fill: false, opacity: 0.85 } });
+  OV.gacc = L.geoJSON(fc, { pane: "bounds", interactive: false, style: () => ({ color: isDark() ? "#e8e8e8" : "#222", weight: 2.2, fill: false, opacity: 0.85 }) });
   const sel = $("regionSel"), names = fc.features.map(f => f.properties.name).filter(Boolean).sort();
   const og = document.createElement("optgroup"); og.label = "GACCs";
   names.forEach(n => og.appendChild(new Option(n.replace(/ (Geographic Area )?(Interagency )?Coordination Center$/i, ""), "gacc:" + n)));
@@ -1320,7 +1392,7 @@ function addGacc(fc) {
 }
 function addPsa(fc) {
   S.psa = fc;
-  OV.psa = L.geoJSON(fc, { pane: "bounds", style: { color: "#444", weight: 1, dashArray: "4 3", fill: false, opacity: 0.7 },
+  OV.psa = L.geoJSON(fc, { pane: "bounds", style: () => ({ color: isDark() ? "#bbbbbb" : "#444", weight: 1, dashArray: "4 3", fill: false, opacity: 0.7 }),
     onEachFeature: (f, l) => l.bindTooltip(`PSA ${esc(f.properties.code)}${f.properties.name ? " · " + esc(f.properties.name) : ""}`, { sticky: true }) });
 }
 function detectErcKeys(fc) {
@@ -1382,6 +1454,7 @@ function syncOverlays() {
 
 // ================================================================= area & time zones
 function zonesFor(v) {
+  if (v === "conus") { const bz = Intl.DateTimeFormat().resolvedOptions().timeZone; return [ZONE_NAME[bz] && !/Anchorage|Adak|Honolulu|Puerto_Rico/.test(bz) ? bz : "America/Denver", ""]; }
   if (FIXED_REGIONS[v]) return FIXED_REGIONS[v].zones;
   const hit = GACC_ZONES.find(([re]) => re.test(v.slice(5)));
   return hit ? hit[1] : null;
@@ -1397,11 +1470,12 @@ function goRegion(v, move = true) {
   }
   const z = zonesFor(v);
   if (z) setZones(z[0], z[1]);
+  if (S.N) renderClocks(S.times[S.t]);
   writeHash();
 }
 function setZones(z1, z2) {
-  S.tz1 = z1; S.tz2 = z2 || "";
-  $("tz1").value = z1; $("tz2").value = S.tz2;
+  S.tz1 = z1; S.tz2 = "";
+  $("tz1").value = z1;
   store("ussmoke.zones", [z1, S.tz2]);
   if (S.M) { renderDays(); setTime(S.t); if (S.point) buildDetail(); }
 }
@@ -1415,6 +1489,30 @@ function setUnits(u) {
 }
 function setCb(on) { S.cb = on; $("cbChk").checked = on; store("ussmoke.cb", on); setVentScale(S.ventTh); if (S.M) { render(); if (S.point) buildDetail(); } }
 function setLite(on) { S.lite = on; $("liteChk").checked = on; store("ussmoke.lite", on); if (S.M) render(); }
+
+// ================================================================= light / dark theme
+const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+function themePref() { return recall("ussmoke.theme") || "auto"; }
+function isDark() { return document.documentElement.getAttribute("data-theme") === "dark"; }
+function applyTheme(pref) {
+  store("ussmoke.theme", pref);
+  const dark = pref === "dark" || (pref === "auto" && darkQuery && darkQuery.matches);
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  $("themeSel").value = pref;
+  const b = $("themeBtn");
+  b.textContent = dark ? "☀️" : "🌙";
+  b.title = b.ariaLabel = dark ? "Switch to light mode" : "Switch to dark mode";
+  b.setAttribute("aria-label", b.title);
+  // swap the basemap only if it is one of the defaults for the other theme
+  const want = dark ? "Dark gray" : "Topographic";
+  if (baseName !== want && (baseName === "Topographic" || baseName === "Dark gray" || baseName === "Light gray")) {
+    map.removeLayer(base[baseName]); base[want].addTo(map); baseName = want;
+  }
+  [OV.gacc, OV.psa].forEach(l => l && l.setStyle && l.setStyle(l.options && l.options.style ? l.options.style : undefined));
+  if (window.Chart && Chart.defaults) { Chart.defaults.color = dark ? "#c9d1d6" : "#666"; Chart.defaults.borderColor = dark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.1)"; }
+  if (S.point) buildDetail();
+}
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener("change", () => { if (themePref() === "auto") applyTheme("auto"); });
 
 // ================================================================= share links & print
 let hashTimer = null;
@@ -1467,14 +1565,14 @@ function doPrint() {
 function initUI(H) {
   const rs = $("regionSel");
   Object.entries(FIXED_REGIONS).forEach(([key, r]) => rs.add(new Option(r.label, key)));
-  ZONE_CHOICES.forEach(([z, n]) => { $("tz1").add(new Option(n, z)); $("tz2").add(new Option(n, z)); });
-  $("tz2").insertBefore(new Option("None", ""), $("tz2").firstChild);
+  ZONE_CHOICES.forEach(([z, n]) => $("tz1").add(new Option(n, z)));
   for (const [k2, sel] of [["vent", "uVent"], ["wind", "uWind"], ["temp", "uTemp"], ["hgt", "uHgt"], ["precip", "uPrecip"]])
     UNIT_OPTS[k2].forEach(o => $(sel).add(new Option(o[1], o[0])));
   const bz = Intl.DateTimeFormat().resolvedOptions().timeZone, savedZ = (H && H.zones) || recall("ussmoke.zones");
-  if (savedZ) { S.tz1 = savedZ[0]; S.tz2 = savedZ[1]; } else if (ZONE_NAME[bz]) { S.tz1 = bz; S.tz2 = ""; }
-  $("tz1").value = S.tz1; $("tz2").value = S.tz2 || "";
-  $("tz1").onchange = $("tz2").onchange = () => setZones($("tz1").value, $("tz2").value);
+  S.tz2 = "";
+  if (savedZ) S.tz1 = savedZ[0]; else if (ZONE_NAME[bz]) S.tz1 = bz;
+  $("tz1").value = S.tz1;
+  $("tz1").onchange = () => setZones($("tz1").value);
   rs.onchange = () => goRegion(rs.value);
 
   const sel = $("layerSel");
@@ -1538,6 +1636,9 @@ function initUI(H) {
   };
   $("buCsv").onclick = () => unitsCsv();
   $("shareBtn").onclick = copyLink;
+  applyTheme(themePref());
+  $("themeBtn").onclick = () => applyTheme(isDark() ? "light" : "dark");
+  $("themeSel").onchange = e => applyTheme(e.target.value);
   $("printBtn").onclick = doPrint;
   $("drawerBtn").onclick = () => document.body.classList.toggle("drawer");
   document.addEventListener("keydown", e => {
@@ -1573,6 +1674,7 @@ async function main() {
   if (man.status !== "fulfilled") {
     banner("<b>No forecast data yet.</b> In your GitHub repo open <b>Actions → Update data → Run workflow</b>, wait about 30 minutes, then reload this page.");
     $("updated").textContent = "waiting for first data run";
+    renderClocks(Math.floor(Date.now() / 1000));
     renderUnits();
     return;
   }
