@@ -1,4 +1,7 @@
-# National Smoke Dispersion & Burn-Window Planner
+# National Smoke Dispersion & Burn-Window Planner (EXPERIMENTAL)
+
+> **Experimental:** this page is under development. Do not use it to make operational decisions.
+> If you need assistance with tactical planning, please reach out to your local Predictive Services forecaster.
 
 A free web page, hosted on GitHub Pages, for smoke dispersion and burn-window planning
 anywhere in the United States, built for Predictive Services at every GACC.
@@ -41,13 +44,20 @@ in local time + UTC + your main time, and flags for:
 There's a daily table (including overnight settling risk) and a **CSV download** of the full point forecast.
 
 **Other tools**
-- **Area menu**: Lower 48, any GACC, Alaska, Hawaii, Puerto Rico. Sets the usual time zones for that area.
-- **Clocks**: main zone, optional second zone, and UTC.
+- **Area menu**: Lower 48, any GACC, Alaska, Hawaii, Puerto Rico. Sets that area's time zone.
+- **Clocks** (top right), all for the selected forecast time:
+  1. **Local time**: the point you clicked on the map, or with no point open, the selected area's or GACC's time zone.
+  2. **Your time**: the time zone your own computer or phone is set to.
+  3. **UTC**.
+- **Experimental notice**: a permanent banner and badge say the page is under development and not for
+  operational decisions; the notice also prints and appears at the top of every CSV.
 - **Copy link**: the URL captures area, layer, time, clicked point, criteria, ventilation scale and units.
 - **Print / PDF**: a landscape page with title, times, criteria and legend (use "Save as PDF" in the print dialog).
 - **My burn units**: save units with their own prescriptions; each shows its next window. Export/import
   as a JSON file to share with others; download all units' windows as CSV.
 - **Display**: ventilation in kt-ft, m²/s or mph-ft; wind in mph, kt or m/s; °F/°C; ft/m; in/mm.
+- **Light / dark mode**: the 🌙 / ☀️ button at the top right switches between them. Under **Display → Theme**
+  choose Light, Dark, or Match my device. Dark mode uses a dark basemap; printing is always light.
 - **Colorblind-safe colors** and **Lite mode** (less data; on automatically on phones).
 - On phones, the controls open from **☰ Controls**.
 
